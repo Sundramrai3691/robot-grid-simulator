@@ -1,28 +1,28 @@
 # Robot Grid Simulator
 
-A simple grid-based simulator for robot pathfinding in a dynamic, urban-style environment.
+A grid-based simulator for robot pathfinding in a dynamic, urban-style environment using A* algorithm.
 
 ## Features
 
-- Realistic map with buildings, traffic lights, and dynamic obstacles
-- Smart robot that navigates using path planning and obstacle avoidance
-- Traffic light logic with red/yellow/green states
-- Visual trail effect for robot movement
-- Keyboard controls to set start/end, barriers, and run simulation
-- Support for saving/loading maps
+- Realistic map with static and dynamic obstacles
+- Smart robot with path planning and re-planning
+- Traffic light logic with red, yellow, and green states
+- Trail effect for visualizing robot movement
+- Support for saving and loading map layouts
+- Adjustable simulation speed and grid control
 
 ## Controls
 
-- **Left Click**: Place Start / End / Barrier / Traffic Light (when holding `T`)
-- **Right Click**: Remove cell
-- **Space**: Start simulation
-- **C**: Clear grid
-- **R**: Reset simulation
-- **S**: Save map
-- **L**: Load map
-- **I**: Import image map (future)
-- **1–4**: Change robot speed
-- **T**: Toggle traffic light tool
+- Left Click: Set Start / End / Barrier / Traffic Light (when holding `T`)
+- Right Click: Remove cell
+- Space: Start simulation
+- C: Clear grid
+- R: Reset simulation
+- S: Save map
+- L: Load map
+- I: Import image map (future feature)
+- 1–4: Change robot speed
+- T: Toggle traffic light tool
 
 ## Requirements
 
@@ -30,10 +30,7 @@ A simple grid-based simulator for robot pathfinding in a dynamic, urban-style en
 - pygame
 - pillow
 
-Install with:
+Install dependencies using:
+
+```bash
 pip install -r requirements.txt
-
-## How to Run
-
-Run the simulator using: python main.py
-
