@@ -1,7 +1,6 @@
 """
-A* pathfinding algorithm implementation
+A* pathfinding algorithm implementation with perception support
 """
-
 import math
 from queue import PriorityQueue
 
@@ -18,8 +17,18 @@ def reconstruct_path(came_from, current, draw):
         current.make_path()
         draw()
 
-def a_star(draw_func, grid, start, end):
-    """A* pathfinding algorithm"""
+def a_star(draw_func, grid, start, end, known_map=None):
+    """
+    A* pathfinding algorithm with optional perception support
+    
+    Args:
+        draw_func: Function to draw the grid
+        grid: Full grid for pathfinding (existing behavior)
+        start: Starting node
+        end: End node
+        known_map: Optional 2D boolean array for limited perception
+                  If provided, only known cells are considered passable
+    """
     count = 0
     open_set = PriorityQueue()
     open_set.put((0, count, start))
@@ -40,6 +49,11 @@ def a_star(draw_func, grid, start, end):
             return True
 
         for neighbor in current.neighbors:
+            # Skip unknown cells if using limited perception
+            if known_map is not None:
+                if not known_map[neighbor.row][neighbor.col]:
+                    continue
+            
             dx = abs(current.row - neighbor.row)
             dy = abs(current.col - neighbor.col)
             step_cost = 1.41 if dx + dy == 2 else 1
@@ -50,7 +64,7 @@ def a_star(draw_func, grid, start, end):
                 g_score[neighbor] = temp_g
                 f_score[neighbor] = temp_g + heuristic(neighbor, end)
                 neighbor.previous = current
-
+                
                 if neighbor not in open_set_hash:
                     count += 1
                     open_set.put((f_score[neighbor], count, neighbor))

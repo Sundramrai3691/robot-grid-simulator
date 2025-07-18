@@ -21,6 +21,10 @@ class Spot:
         self.cost = 1
         self.is_traffic_stop = False
         self.light_state = "green"  # green, yellow, red
+        
+        # Target support
+        self.is_target = False
+        self.target_priority = 0
 
     def get_pos(self):
         return self.row, self.col
@@ -43,8 +47,28 @@ class Spot:
     def is_dynamic(self):
         return self.color == BLUE
 
+    def is_target_spot(self):
+        return self.is_target
+
+    def make_target(self, priority=1):
+        """Make this spot a target with given priority"""
+        self.is_target = True
+        self.target_priority = priority
+        self.update_target_color()
+
+    def update_target_color(self):
+        """Update color based on target priority"""
+        if self.target_priority >= 3:
+            self.color = TARGET_HIGH
+        elif self.target_priority >= 2:
+            self.color = TARGET_MEDIUM
+        else:
+            self.color = TARGET_LOW
+        self.original_color = self.color
+
     def reset(self):
-        self.color = self.original_color
+        if not self.is_target:
+            self.color = self.original_color
         self.cost = 1
         self.previous = None
 
@@ -92,6 +116,14 @@ class Spot:
 
     def draw(self, win):
         pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
+
+        # Draw target priority indicator
+        if self.is_target:
+            # Draw priority number
+            font = pygame.font.Font(None, 24)
+            text = font.render(str(self.target_priority), True, WHITE)
+            text_rect = text.get_rect(center=(self.x + self.width//2, self.y + self.width//2))
+            win.blit(text, text_rect)
 
         # Draw traffic light indicator if applicable
         if self.is_traffic_stop:

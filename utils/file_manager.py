@@ -1,66 +1,147 @@
 """
-File management utilities for saving and loading maps
+File management utilities for saving/loading maps and obstacles
 """
 
 import json
 import os
-from core.grid import make_grid
-from config.settings import ROWS
+from core.spot import Spot
+from config.constants import *
 
-def save_map(grid, start, end, map_name):
-    """Save current map layout to file"""
-    data = {
-        "barriers": [spot.get_pos() for row in grid for spot in row if spot.is_barrier()],
-        "traffic_lights": [spot.get_pos() for row in grid for spot in row if spot.is_traffic_stop],
-        "start": start.get_pos() if start else None,
-        "end": end.get_pos() if end else None
+def save_map(grid, start, targets, map_name):
+    """Save complete map layout including start, targets, and obstacles"""
+    map_data = {
+        'obstacles': [],
+        'traffic_lights': [],
+        'start': None,
+        'targets': []
     }
-    with open(f"maps/{map_name}.json", "w") as f:
-        json.dump(data, f)
-    print(f"Map '{map_name}' saved.")
+    
+    # Save obstacles and traffic lights
+    for row in grid:
+        for spot in row:
+            if spot.is_barrier():
+                map_data['obstacles'].append([spot.row, spot.col])
+            elif spot.is_traffic_stop:
+                map_data['traffic_lights'].append([spot.row, spot.col])
+    
+    # Save start position
+    if start:
+        map_data['start'] = [start.row, start.col]
+    
+    # Save targets with priorities
+    for target in targets:
+        map_data['targets'].append({
+            'row': target.row,
+            'col': target.col,
+            'priority': target.target_priority
+        })
+    
+    # Save to file
+    filename = f"maps/{map_name}.json"
+    try:
+        with open(filename, 'w') as f:
+            json.dump(map_data, f, indent=2)
+        print(f"Map saved as {filename}")
+    except Exception as e:
+        print(f"Error saving map: {e}")
 
 def load_map(grid, map_name):
-    """Load a named map from file"""
-    filepath = f"maps/{map_name}.json"
-    if os.path.exists(filepath):
-        with open(filepath, "r") as f:
-            data = json.load(f)
-            from config.settings import WIDTH
-            new_grid = make_grid(ROWS, WIDTH)
-            start = end = None
-            
-            for row, col in data["barriers"]:
-                new_grid[row][col].make_barrier()
-            for row, col in data["traffic_lights"]:
-                new_grid[row][col].make_traffic_light()
-            if data["start"]:
-                r, c = data["start"]
-                start = new_grid[r][c]
+    """Load complete map layout"""
+    filename = f"maps/{map_name}.json"
+    
+    if not os.path.exists(filename):
+        print(f"Map file {filename} not found")
+        return None
+    
+    try:
+        with open(filename, 'r') as f:
+            map_data = json.load(f)
+        
+        # Clear existing grid
+        for row in grid:
+            for spot in row:
+                spot.reset()
+                spot.is_traffic_stop = False
+                spot.is_target = False
+        
+        # Load obstacles
+        for pos in map_data.get('obstacles', []):
+            row, col = pos
+            if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
+                grid[row][col].make_barrier()
+        
+        # Load traffic lights
+        for pos in map_data.get('traffic_lights', []):
+            row, col = pos
+            if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
+                grid[row][col].make_traffic_light()
+        
+        # Load start
+        start = None
+        if map_data.get('start'):
+            row, col = map_data['start']
+            if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
+                start = grid[row][col]
                 start.make_start()
-            if data["end"]:
-                r, c = data["end"]
-                end = new_grid[r][c]
-                end.make_end()
-            print(f"Map '{map_name}' loaded.")
-            return new_grid, start, end
-    else:
-        print(f"No map found with name '{map_name}'.")
+        
+        # Load targets
+        targets = []
+        for target_data in map_data.get('targets', []):
+            row, col = target_data['row'], target_data['col']
+            priority = target_data.get('priority', 1)
+            if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
+                target = grid[row][col]
+                target.make_target(priority)
+                targets.append(target)
+        
+        print(f"Map {map_name} loaded successfully")
+        return grid, start, targets
+        
+    except Exception as e:
+        print(f"Error loading map: {e}")
         return None
 
 def save_obstacles(grid):
-    """Save only obstacles to file"""
-    with open("obstacles.json", 'w') as f:
-        json.dump([[spot.get_pos() for spot in row if spot.is_barrier()] for row in grid], f)
-    print("Obstacles saved.")
+    """Save only obstacles to default file"""
+    obstacles = []
+    for row in grid:
+        for spot in row:
+            if spot.is_barrier():
+                obstacles.append([spot.row, spot.col])
+    
+    filename = "maps/obstacles.json"
+    try:
+        with open(filename, 'w') as f:
+            json.dump(obstacles, f, indent=2)
+        print(f"Obstacles saved to {filename}")
+    except Exception as e:
+        print(f"Error saving obstacles: {e}")
 
 def load_obstacles(grid):
-    """Load obstacles from file"""
-    if os.path.exists("obstacles.json"):
-        with open("obstacles.json", 'r') as f:
-            obstacle_positions = json.load(f)
-            for positions in obstacle_positions:
-                for row, col in positions:
-                    grid[row][col].make_barrier()
-        print("Obstacles loaded.")
-    else:
-        print("No saved obstacles found.")
+    """Load obstacles from default file"""
+    filename = "maps/obstacles.json"
+    
+    if not os.path.exists(filename):
+        print(f"Obstacles file {filename} not found")
+        return
+    
+    try:
+        with open(filename, 'r') as f:
+            obstacles = json.load(f)
+        
+        # Clear existing barriers
+        for row in grid:
+            for spot in row:
+                if spot.is_barrier():
+                    spot.reset()
+        
+        # Load obstacles
+        for pos in obstacles:
+            row, col = pos
+            if 0 <= row < len(grid) and 0 <= col < len(grid[0]):
+                grid[row][col].make_barrier()
+        
+        print(f"Obstacles loaded from {filename}")
+        
+    except Exception as e:
+        print(f"Error loading obstacles: {e}")
